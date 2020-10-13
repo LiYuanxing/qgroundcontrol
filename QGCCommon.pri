@@ -241,9 +241,9 @@ WindowsBuild {
         /wd4005 \   # silence warnings about macro redefinition, these come from the shapefile code with is external
         /wd4290 \   # ignore exception specifications
         /wd4267     # silence conversion from 'size_t' to 'int', possible loss of data, these come from gps drivers shared with px4
-    WarningsAsErrorsOn {
-        QMAKE_CXXFLAGS_WARN_ON += /WX
-    }
+    #WarningsAsErrorsOn {
+    #    QMAKE_CXXFLAGS_WARN_ON += /WX
+    #}
 }
 
 #
