@@ -50,6 +50,11 @@ MultiVehicleManager::MultiVehicleManager(QGCApplication* app, QGCToolbox* toolbo
     if (_gcsHeartbeatEnabled) {
         _gcsHeartbeatTimer.start();
     }
+
+    _gcs_ALL_GPS_Timer.setInterval(1000);
+    _gcs_ALL_GPS_Timer.setSingleShot(false);
+    connect(&_gcs_ALL_GPS_Timer, &QTimer::timeout, this, &MultiVehicleManager::_sendAllVehicleInfo);
+    _gcs_ALL_GPS_Timer.start();
 }
 
 void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
@@ -368,6 +373,59 @@ void MultiVehicleManager::setGcsHeartbeatEnabled(bool gcsHeartBeatEnabled)
             _gcsHeartbeatTimer.start();
         } else {
             _gcsHeartbeatTimer.stop();
+        }
+    }
+}
+
+void MultiVehicleManager::_sendAllVehicleInfo(void)
+{
+    LinkManager *linkMgr = _toolbox->linkManager();
+    if(linkMgr->links().count() == 0)
+    {
+        return;
+    }
+    //get gps info
+    info_num = 0;
+    for (int j = 1; j < 256; j++)
+    {
+        Vehicle *info = getVehicleById(j);
+        if (info != nullptr)
+        {
+            id[info_num]  = info->id();
+            lat[info_num] = info->latitude() * (double)1e7;
+            lon[info_num] = info->longitude() * (double)1e7;
+            alt[info_num] = info->altitudeAMSL()->rawValue().toFloat() * 100;
+            info_num++;
+        }
+    }
+
+    // Send all GPS out on each link
+    for (int i = 0; i < linkMgr->links().count(); i++)
+    {
+        LinkInterface *link = linkMgr->links()[i];
+        if (link->isConnected())
+        {
+            for (uint8_t j = 0; j < info_num; j++)
+            {
+                memcpy(&info_data[j][0], &id[j], 1);
+                memcpy(&info_data[j][1], &lat[j], 4);
+                memcpy(&info_data[j][5], &lon[j], 4);
+                memcpy(&info_data[j][9], &alt[j], 4);
+
+                mavlink_message_t message;
+                mavlink_msg_data16_pack_chan(_mavlinkProtocol->getSystemId(),
+                                             _mavlinkProtocol->getComponentId(),
+                                             link->mavlinkChannel(),
+                                             &message,
+                                             100,
+                                             16,
+                                             &info_data[j][0]);
+
+                uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+                int len = mavlink_msg_to_send_buffer(buffer, &message);
+
+                link->writeBytesSafe((const char *)buffer, len);
+            }
         }
     }
 }

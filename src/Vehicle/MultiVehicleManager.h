@@ -84,6 +84,10 @@ public:
 
     QGeoCoordinate lastKnownLocation    () { return _lastKnownLocation; }
 
+    uint8_t id[10];
+    uint8_t info_num;
+    uint8_t info_data[10][16];
+    int32_t lat[10], lon[10], alt[10];
 signals:
     void vehicleAdded                   (Vehicle* vehicle);
     void vehicleRemoved                 (Vehicle* vehicle);
@@ -102,6 +106,7 @@ private slots:
     void _setActiveVehiclePhase2        (void);
     void _vehicleParametersReadyChanged (bool parametersReady);
     void _sendGCSHeartbeat              (void);
+    void _sendAllVehicleInfo            (void);
     void _vehicleHeartbeatInfo          (LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType);
     void _requestProtocolVersion        (unsigned version);
     void _coordinateChanged             (QGeoCoordinate coordinate);
@@ -127,6 +132,7 @@ private:
     QGeoCoordinate              _lastKnownLocation;
 
     QTimer              _gcsHeartbeatTimer;             ///< Timer to emit heartbeats
+    QTimer              _gcs_ALL_GPS_Timer;             ///< Timer to emit heartbeats
     bool                _gcsHeartbeatEnabled;           ///< Enabled/disable heartbeat emission
     static const int    _gcsHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
     static const char*  _gcsHeartbeatEnabledKey;
